@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import planRoutes from "./routes/planRoutes.js";
+import offerRoutes from "./routes/offerRoutes.js";
 import pool from "./config/db.js"; // importing initializes DB
 
 dotenv.config();
@@ -30,6 +31,7 @@ app.get("/api/db-test", async (req, res) => {
 
 // routes
 app.use("/api/plans", planRoutes);
+app.use("/api/offers",offerRoutes);
 
 app.get("/api/test", (req, res) => {
   res.json({
