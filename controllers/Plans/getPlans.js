@@ -1,16 +1,24 @@
-import Plan from "../../models/Plan.js";
-
+import pool from "../../config/db.js";
 
 const getPlans = async (req, res) => {
   try {
-    const plans = await Plan.find(); // fetch all plans
-    res.json({
-      success: true,
-      message: 'Plans fetched successfully',
-      plans
+    const query = `
+      SELECT *
+      FROM plans
+      ORDER BY plan_id DESC;
+    `;
+
+    const result = await pool.query(query);
+
+    return res.status(200).json({
+      message: "Plans fetched successfully",
+      plans: result.rows,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    console.error("Get plans error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
   }
 };
 

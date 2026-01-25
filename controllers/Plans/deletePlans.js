@@ -1,23 +1,38 @@
-import Plan from "../../models/Plan.js";
-
+import pool from "../../config/db.js";
 
 const deletePlan = async (req, res) => {
   try {
-    const { id } = req.params; // get plan id from URL
+    const { id } = req.params;
 
-    const deletedPlan = await Plan.findByIdAndDelete(id);
-
-    if (!deletedPlan) {
-      return res.status(404).json({ success: false, message: 'Plan not found' });
+    if (!id) {
+      return res.status(400).json({
+        message: "Plan id is required",
+      });
     }
 
-    res.json({
-      success: true,
-      message: 'Plan deleted successfully',
-      plan: deletedPlan
+    const query = `
+      DELETE FROM plans
+      WHERE plan_id = $1
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: "Plan not found",
+      });
+    }
+
+    return res.json({
+      message: "Plan deleted successfully",
+      deletedPlan: result.rows[0],
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    console.error("Delete plan error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
   }
 };
 

@@ -1,27 +1,55 @@
-import Plan from '../../models/Plan.js';
+import pool from "../../config/db.js";
 
 const updatePlan = async (req, res) => {
   try {
     const { id } = req.params;
-    const { providerName, speed, price, validity, data } = req.body;
+    const { name, data_limit, speed, duration_days, price } = req.body;
 
-    if (!providerName || !speed || !price || !validity || !data) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
+    if (!id) {
+      return res.status(400).json({
+        message: "Plan id is required",
+      });
     }
 
-    const updatedPlan = await Plan.findByIdAndUpdate(
+    const query = `
+      UPDATE plans
+      SET
+        name = COALESCE($1, name),
+        data_limit = COALESCE($2, data_limit),
+        speed = COALESCE($3, speed),
+        duration_days = COALESCE($4, duration_days),
+        price = COALESCE($5, price),
+        updated_at = NOW()
+      WHERE plan_id = $6
+      RETURNING *;
+    `;
+
+    const values = [
+      name,
+      data_limit,
+      speed,
+      duration_days,
+      price,
       id,
-      { providerName, speed, price, validity, data },
-      { new: true, runValidators: true }
-    );
+    ];
 
-    if (!updatedPlan) {
-      return res.status(404).json({ success: false, message: 'Plan not found' });
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: "Plan not found",
+      });
     }
 
-    res.json({ success: true, message: 'Plan updated successfully', plan: updatedPlan });
+    return res.status(200).json({
+      message: "Plan updated successfully",
+      plan: result.rows[0],
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    console.error("Update plan error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
   }
 };
 

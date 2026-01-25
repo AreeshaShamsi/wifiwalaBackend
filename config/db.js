@@ -1,13 +1,25 @@
-const mongoose = require('mongoose');
+import pkg from "pg";
+const { Pool } = pkg;
+import dotenv from "dotenv";
 
-const connectDB = async () => {
+dotenv.config();
+
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+});
+
+// FORCE connection test
+(async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('MongoDB connected');
-  } catch (error) {
-    console.error('MongoDB connection failed:', error.message);
-    process.exit(1);
+    const res = await pool.query("SELECT 1");
+    console.log("✅ PostgreSQL connected successfully");
+  } catch (err) {
+    console.error("❌ PostgreSQL connection failed:", err.message);
   }
-};
+})();
 
-module.exports = connectDB;
+export default pool;

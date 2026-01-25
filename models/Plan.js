@@ -7,7 +7,7 @@ const planSchema = new Schema(
     speed: { type: String, required: true },
     price: { type: Number, required: true },
     validity: { type: String, required: true },
-    data: { type: String, required: true }
+    data: { type: String, required: true },
   },
   { timestamps: true }
 );
