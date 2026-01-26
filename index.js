@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import planRoutes from "./routes/planRoutes.js";
 import offerRoutes from "./routes/offerRoutes.js";
+import complaintRoutes from "./routes/complaintRoutes.js";
 import pool from "./config/db.js"; // importing initializes DB
 
 dotenv.config();
@@ -13,27 +14,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// test DB route
-app.get("/api/db-test", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT NOW()");
-    res.json({
-      success: true,
-      time: result.rows[0],
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
-});
+
 
 // routes
 app.use("/api/plans", planRoutes);
 app.use("/api/offers",offerRoutes);
+app.use("/api/complaint", complaintRoutes);
 
-app.get("/api/test", (req, res) => {
+app.get("/", (req, res) => {
   res.json({
     success: true,
     message: "Backend is working 🚀",
