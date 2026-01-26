@@ -18,6 +18,7 @@ const getPlans = async (req, res) => {
     console.error("Get plans error:", error);
     return res.status(500).json({
       message: "Internal server error",
+      error: error.message,  // exact reason client pe bhi dikhega
     });
   }
 };
