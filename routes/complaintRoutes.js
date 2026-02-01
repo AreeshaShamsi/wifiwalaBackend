@@ -1,12 +1,23 @@
 import express from "express";
-import createComplaint from "../controllers/Complaint/createComplaint.js";
-import readComplaints from "../controllers/Complaint/readComplaint.js";
-import deleteComplaint from "../controllers/Complaint/deleteComplaint.js";
+import {
+  submitComplaint,
+  getUserComplaints,
+  getAllComplaints,
+  updateComplaintStatus,
+  deleteComplaint,
+  getComplaintStats,
+} from "../controllers/complaintController.js";
 
 const router = express.Router();
 
-router.post("/create", createComplaint);
-router.get("/", readComplaints);
-router.delete("/complaints/:id", deleteComplaint);
+// User routes
+router.post("/submit", submitComplaint);
+router.get("/user/:userId", getUserComplaints);
+
+// Admin routes
+router.get("/admin/all", getAllComplaints);
+router.get("/admin/stats", getComplaintStats);
+router.put("/:id/status", updateComplaintStatus);
+router.delete("/:id", deleteComplaint);
 
 export default router;
