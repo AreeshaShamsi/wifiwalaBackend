@@ -1,26 +1,54 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+
 import planRoutes from "./routes/planRoutes.js";
 import offerRoutes from "./routes/offerRoutes.js";
 import complaintRoutes from "./routes/complaintRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
-import pool from "./config/db.js"; // importing initializes DB
+
+import carouselRoute from "./routes/carouselRoute.js";
+import vipPlanRoutes from "./routes/vipRoutes.js";
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 
-// middleware
+/* =========================
+   GLOBAL MIDDLEWARE
+========================= */
 app.use(cors());
+
+// ✅ JSON only (DO NOT add express.urlencoded globally)
 app.use(express.json());
 
-// routes
+/* =========================
+   STATIC FILES
+========================= */
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+/* =========================
+   ROUTES
+========================= */
 app.use("/api/plans", planRoutes);
 app.use("/api/offers", offerRoutes);
+app.use("/api/carousel", carouselRoute);
 app.use("/api/complaints", complaintRoutes);
-app.use("/api/auth", authRoutes);
 
+// 🔹 urlencoded ONLY where needed (auth forms etc.)
+app.use("/api/auth", express.urlencoded({ extended: true }), authRoutes);
+
+
+app.use("/api/vip-plans", vipPlanRoutes);
+
+/* =========================
+   HEALTH CHECK
+========================= */
 app.get("/", (req, res) => {
   res.json({
     success: true,
