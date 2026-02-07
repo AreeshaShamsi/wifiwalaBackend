@@ -16,7 +16,7 @@ const compressImage = async (req, res, next) => {
   const outputPath = path.join(outputDir, fileName);
 
   try {
-    await sharp(req.file.path)
+    await sharp(req.file.buffer) // ✅ FIX: buffer, NOT path
       .resize(1200, 600, {
         fit: "inside",
         withoutEnlargement: true,
@@ -24,11 +24,10 @@ const compressImage = async (req, res, next) => {
       .webp({ quality: 70 })
       .toFile(outputPath);
 
-    fs.unlinkSync(req.file.path); // temp delete
-
     req.compressedImagePath = `/uploads/carousel/${fileName}`;
     next();
   } catch (err) {
+    console.error(err);
     return res.status(500).json({
       message: "Image compression failed",
     });

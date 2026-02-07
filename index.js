@@ -11,6 +11,7 @@ import authRoutes from "./routes/authRoutes.js";
 
 import carouselRoute from "./routes/carouselRoute.js";
 import vipPlanRoutes from "./routes/vipRoutes.js";
+import settingsRoutes from "./routes/settingRoute.js";
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use("/api/plans", planRoutes);
 app.use("/api/offers", offerRoutes);
 app.use("/api/carousel", carouselRoute);
 app.use("/api/complaints", complaintRoutes);
+app.use("/api/settings", settingsRoutes);
 
 // 🔹 urlencoded ONLY where needed (auth forms etc.)
 app.use("/api/auth", express.urlencoded({ extended: true }), authRoutes);

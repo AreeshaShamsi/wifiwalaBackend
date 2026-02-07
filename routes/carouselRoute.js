@@ -1,26 +1,34 @@
 import express from "express";
-import multer from "multer";
-import compressImage from "../middlewares/compressImage.js";
+import upload from "../middlewareS/upload.js";
+import compressImage from "../middlewareS/compressImage.js";
+
 import {
-  adminAddSlide,
-  adminGetSlide,
-  adminUpdateSlide,
-  adminToggleSlide,
-  adminListSlides,
-  getActiveSlides,
+  createSlide,
+  getSlide,
+  updateSlide,
+  deleteSlide,
+  listSlides,
 } from "../controllers/carousel/carouselController.js";
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/tmp" });
 
-// ADMIN
-router.post("/admin/:position", upload.single("image"), compressImage, adminAddSlide);
-router.put("/admin/:position", upload.single("image"), compressImage, adminUpdateSlide);
-router.patch("/admin/:position/toggle", adminToggleSlide);
-router.get("/admin/:position", adminGetSlide);
-router.get("/admin", adminListSlides);
+router.post(
+  "/",
+  upload.single("image"),
+  compressImage,
+  createSlide
+);
 
-// PUBLIC
-router.get("/", getActiveSlides);
+router.get("/", listSlides);
+router.get("/:position", getSlide);
+
+router.put(
+  "/:position",
+  upload.single("image"),
+  compressImage,
+  updateSlide
+);
+
+router.delete("/:position", deleteSlide);
 
 export default router;

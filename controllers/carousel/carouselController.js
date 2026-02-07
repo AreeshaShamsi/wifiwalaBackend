@@ -1,14 +1,14 @@
 import pool from "../../config/db.js";
 
 /**
- * ADMIN: ADD slide
+ * ADMIN: CREATE SLIDE (WITH IMAGE)
  */
-export const adminAddSlide = async (req, res) => {
+export const createSlide = async (req, res) => {
   try {
-    const { position } = req.params;
+    const { position } = req.body;
 
     if (!req.compressedImagePath) {
-      return res.status(400).json({ message: "Image not processed" });
+      return res.status(400).json({ message: "Image required" });
     }
 
     const exists = await pool.query(
@@ -16,23 +16,19 @@ export const adminAddSlide = async (req, res) => {
       [position]
     );
 
-    if (exists.rows.length > 0) {
-      return res
-        .status(409)
-        .json({ message: "Slide already exists at this position" });
+    if (exists.rows.length) {
+      return res.status(409).json({ message: "Slide already exists" });
     }
 
-    await pool.query(
-      `INSERT INTO carousel_slides (position, image_url, image_key)
-       VALUES ($1, $2, $3)`,
-      [position, req.compressedImagePath, req.compressedImagePath]
+    const result = await pool.query(
+      `INSERT INTO carousel_slides
+       (position, image_url, image_key)
+       VALUES ($1, $2, $2)
+       RETURNING *`,
+      [position, req.compressedImagePath]
     );
 
-    res.status(201).json({
-      message: "Slide added successfully",
-      position,
-      image_url: req.compressedImagePath,
-    });
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -40,24 +36,22 @@ export const adminAddSlide = async (req, res) => {
 };
 
 /**
- * ADMIN: READ ONE slide
+ * ADMIN: READ ONE SLIDE
  */
-export const adminGetSlide = async (req, res) => {
+export const getSlide = async (req, res) => {
   try {
     const { position } = req.params;
 
     const result = await pool.query(
-      `SELECT id, position, image_url, is_active
-       FROM carousel_slides
-       WHERE position = $1`,
+      `SELECT * FROM carousel_slides WHERE position = $1`,
       [position]
     );
 
-    if (result.rows.length === 0) {
+    if (!result.rows.length) {
       return res.status(404).json({ message: "Slide not found" });
     }
 
-    res.status(200).json(result.rows[0]);
+    res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -65,14 +59,14 @@ export const adminGetSlide = async (req, res) => {
 };
 
 /**
- * ADMIN: UPDATE slide image
+ * ADMIN: UPDATE SLIDE (IMAGE ONLY)
  */
-export const adminUpdateSlide = async (req, res) => {
+export const updateSlide = async (req, res) => {
   try {
     const { position } = req.params;
 
     if (!req.compressedImagePath) {
-      return res.status(400).json({ message: "Image not processed" });
+      return res.status(400).json({ message: "Image required" });
     }
 
     const result = await pool.query(
@@ -81,19 +75,15 @@ export const adminUpdateSlide = async (req, res) => {
            image_key = $1,
            updated_at = CURRENT_TIMESTAMP
        WHERE position = $2
-       RETURNING id`,
+       RETURNING *`,
       [req.compressedImagePath, position]
     );
 
-    if (result.rowCount === 0) {
+    if (!result.rowCount) {
       return res.status(404).json({ message: "Slide not found" });
     }
 
-    res.status(200).json({
-      message: "Slide updated successfully",
-      position,
-      image_url: req.compressedImagePath,
-    });
+    res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -101,30 +91,24 @@ export const adminUpdateSlide = async (req, res) => {
 };
 
 /**
- * ADMIN: TOGGLE active (soft delete / restore)
+ * ADMIN: DELETE SLIDE
  */
-export const adminToggleSlide = async (req, res) => {
+export const deleteSlide = async (req, res) => {
   try {
     const { position } = req.params;
 
     const result = await pool.query(
-      `UPDATE carousel_slides
-       SET is_active = NOT is_active,
-           updated_at = CURRENT_TIMESTAMP
+      `DELETE FROM carousel_slides
        WHERE position = $1
-       RETURNING is_active`,
+       RETURNING id`,
       [position]
     );
 
-    if (result.rowCount === 0) {
+    if (!result.rowCount) {
       return res.status(404).json({ message: "Slide not found" });
     }
 
-    res.status(200).json({
-      message: "Slide status updated",
-      position,
-      is_active: result.rows[0].is_active,
-    });
+    res.json({ message: "Slide deleted" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -132,36 +116,14 @@ export const adminToggleSlide = async (req, res) => {
 };
 
 /**
- * ADMIN: LIST all slides (active + inactive)
+ * ADMIN: LIST ALL SLIDES
  */
-export const adminListSlides = async (req, res) => {
+export const listSlides = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, position, image_url, is_active
-       FROM carousel_slides
-       ORDER BY position ASC`
+      `SELECT * FROM carousel_slides ORDER BY position`
     );
-
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-/**
- * PUBLIC: LIST only active slides
- */
-export const getActiveSlides = async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT position, image_url
-       FROM carousel_slides
-       WHERE is_active = true
-       ORDER BY position ASC`
-    );
-
-    res.status(200).json(result.rows);
+    res.json(result.rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
