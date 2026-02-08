@@ -4,43 +4,109 @@ export default async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      name,
+      plan_id,
+      offer_name,
       description,
-      discount_percentage,
+      discount_type,
+      discount_value,
+      max_discount,
       start_date,
       end_date,
-      plan_id,
+      is_active,
     } = req.body;
 
-    const result = await pool.query(
-      `UPDATE offers SET
-        name = $1,
-        description = $2,
-        discount_percentage = $3,
-        start_date = $4,
-        end_date = $5,
-        plan_id = $6,
-        updated_at = NOW()
-       WHERE offer_id = $7
-       RETURNING *`,
-      [
-        name,
-        description,
-        discount_percentage,
-        start_date,
-        end_date,
-        plan_id,
-        id,
-      ]
+    // Check if offer exists
+    const existingOffer = await pool.query(
+      "SELECT * FROM offers WHERE offer_id = $1",
+      [id],
     );
 
-    if (!result.rows.length) {
-      return res.status(404).json({ message: "Offer not found" });
+    if (!existingOffer.rows.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Offer not found",
+      });
     }
 
-    res.json(result.rows[0]);
+    // Validate discount_type if provided
+    if (discount_type && !["percentage", "flat"].includes(discount_type)) {
+      return res.status(400).json({
+        success: false,
+        message: "discount_type must be either 'percentage' or 'flat'",
+      });
+    }
+
+    // Build dynamic update query
+    const updateFields = [];
+    const values = [];
+    let paramCount = 1;
+
+    if (plan_id !== undefined) {
+      updateFields.push(`plan_id = $${paramCount++}`);
+      values.push(plan_id);
+    }
+    if (offer_name !== undefined) {
+      updateFields.push(`offer_name = $${paramCount++}`);
+      values.push(offer_name);
+    }
+    if (description !== undefined) {
+      updateFields.push(`description = $${paramCount++}`);
+      values.push(description);
+    }
+    if (discount_type !== undefined) {
+      updateFields.push(`discount_type = $${paramCount++}`);
+      values.push(discount_type);
+    }
+    if (discount_value !== undefined) {
+      updateFields.push(`discount_value = $${paramCount++}`);
+      values.push(discount_value);
+    }
+    if (max_discount !== undefined) {
+      updateFields.push(`max_discount = $${paramCount++}`);
+      values.push(max_discount);
+    }
+    if (start_date !== undefined) {
+      updateFields.push(`start_date = $${paramCount++}`);
+      values.push(start_date);
+    }
+    if (end_date !== undefined) {
+      updateFields.push(`end_date = $${paramCount++}`);
+      values.push(end_date);
+    }
+    if (is_active !== undefined) {
+      updateFields.push(`is_active = $${paramCount++}`);
+      values.push(is_active);
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No fields provided for update",
+      });
+    }
+
+    // Add updated_at
+    updateFields.push("updated_at = CURRENT_TIMESTAMP");
+
+    // Add offer_id for WHERE clause
+    values.push(id);
+
+    const result = await pool.query(
+      `UPDATE offers SET ${updateFields.join(", ")} WHERE offer_id = $${paramCount} RETURNING *`,
+      values,
+    );
+
+    res.json({
+      success: true,
+      message: "Offer updated successfully",
+      data: result.rows[0],
+    });
   } catch (error) {
-    console.error("Error updating offer:", error); // log actual error
-    res.status(500).json({ message: "Error updating offer", error: error.message });
+    console.error("UPDATE OFFER ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating offer",
+      error: error.message,
+    });
   }
 };

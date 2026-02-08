@@ -3,25 +3,68 @@ import pool from "../../config/db.js";
 export default async function createOffer(req, res) {
   try {
     const {
-      name,
+      plan_id,
+      offer_name,
       description,
-      discount_percentage,
+      discount_type,
+      discount_value,
+      max_discount,
       start_date,
       end_date,
-      plan_id,
+      is_active = true,
     } = req.body;
+
+    // Validate required fields
+    if (
+      !plan_id ||
+      !offer_name ||
+      !discount_type ||
+      !discount_value ||
+      !start_date ||
+      !end_date
+    ) {
+      return res.status(400).json({
+        message:
+          "Missing required fields: plan_id, offer_name, discount_type, discount_value, start_date, end_date",
+      });
+    }
+
+    // Validate discount_type
+    if (!["percentage", "flat"].includes(discount_type)) {
+      return res.status(400).json({
+        message: "discount_type must be either 'percentage' or 'flat'",
+      });
+    }
 
     const result = await pool.query(
       `INSERT INTO offers
-       (name, description, discount_percentage, start_date, end_date, plan_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
+       (plan_id, offer_name, description, discount_type, discount_value, max_discount, start_date, end_date, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [name, description, discount_percentage, start_date, end_date, plan_id]
+      [
+        plan_id,
+        offer_name,
+        description,
+        discount_type,
+        discount_value,
+        max_discount,
+        start_date,
+        end_date,
+        is_active,
+      ],
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({
+      success: true,
+      message: "Offer created successfully",
+      data: result.rows[0],
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error creating offer" });
+    console.error("CREATE OFFER ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error creating offer",
+      error: error.message,
+    });
   }
 }

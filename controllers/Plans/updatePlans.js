@@ -1,9 +1,18 @@
 import pool from "../../config/db.js";
 
 const updatePlan = async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
-    const { name, data_limit, speed, duration_days, price } = req.body;
+    const {
+      description,
+      price,
+      validity,
+      speed,
+      data_limit,
+      ott_platforms = [],
+      is_active,
+    } = req.body;
 
     if (!id) {
       return res.status(400).json({
@@ -11,45 +20,78 @@ const updatePlan = async (req, res) => {
       });
     }
 
+    await client.query("BEGIN");
+
+    // 1️⃣ Update plan
     const query = `
       UPDATE plans
       SET
-        name = COALESCE($1, name),
-        data_limit = COALESCE($2, data_limit),
-        speed = COALESCE($3, speed),
-        duration_days = COALESCE($4, duration_days),
-        price = COALESCE($5, price),
+        description = COALESCE($1, description),
+        price = COALESCE($2, price),
+        validity = COALESCE($3, validity),
+        speed = COALESCE($4, speed),
+        data_limit = COALESCE($5, data_limit),
+        is_active = COALESCE($6, is_active),
         updated_at = NOW()
-      WHERE plan_id = $6
+      WHERE plan_id = $7
       RETURNING *;
     `;
 
     const values = [
-      name,
-      data_limit,
-      speed,
-      duration_days,
+      description,
       price,
+      validity,
+      speed,
+      data_limit,
+      is_active,
       id,
     ];
 
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
 
     if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({
         message: "Plan not found",
       });
     }
 
+    // 2️⃣ Update OTT mappings - delete existing and insert new ones
+    await client.query(`DELETE FROM plan_ott_platforms WHERE plan_id = $1`, [
+      id,
+    ]);
+
+    if (ott_platforms.length > 0) {
+      const ottValues = ott_platforms
+        .map((_, index) => `($1, $${index + 2})`)
+        .join(",");
+
+      await client.query(
+        `
+        INSERT INTO plan_ott_platforms (plan_id, ott_id)
+        VALUES ${ottValues}
+        `,
+        [id, ...ott_platforms],
+      );
+    }
+
+    await client.query("COMMIT");
+
     return res.status(200).json({
+      success: true,
       message: "Plan updated successfully",
       plan: result.rows[0],
     });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Update plan error:", error);
     return res.status(500).json({
-      message: "Internal server error",
+      success: false,
+      message: "Failed to update plan",
+      error: error.message,
     });
+  } finally {
+    client.release();
   }
 };
 

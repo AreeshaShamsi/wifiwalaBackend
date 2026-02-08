@@ -1,34 +1,79 @@
 import pool from "../../config/db.js";
 
 const createPlan = async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { name, data_limit, speed, duration_days, price } = req.body;
+    const {
+      operator_id,
+      description,
+      price,
+      validity,
+      speed,
+      data_limit,
+      ott_platforms = [],
+      is_active = true,
+    } = req.body;
 
-    if (!name || !duration_days || !price) {
+    if (!operator_id || !price || !validity || !speed) {
       return res.status(400).json({
-        message: "name, duration_days and price are required",
+        message: "operator_id, price, validity, and speed are required",
       });
     }
 
-    const query = `
-      INSERT INTO plans
-      (name, data_limit, speed, duration_days, price, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-      RETURNING *;
-    `;
+    await client.query("BEGIN");
 
-    const values = [name, data_limit, speed, duration_days, price];
-    const result = await pool.query(query, values);
+    // 1️⃣ Insert plan
+    const planResult = await client.query(
+      `
+      INSERT INTO plans (
+        operator_id,
+        description,
+        price,
+        validity,
+        speed,
+        data_limit,
+        is_active
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING plan_id
+      `,
+      [operator_id, description, price, validity, speed, data_limit, is_active],
+    );
 
-    return res.status(201).json({
+    const plan_id = planResult.rows[0].plan_id;
+
+    // 2️⃣ Insert OTT mappings
+    if (ott_platforms.length > 0) {
+      const values = ott_platforms
+        .map((_, index) => `($1, $${index + 2})`)
+        .join(",");
+
+      await client.query(
+        `
+        INSERT INTO plan_ott_platforms (plan_id, ott_id)
+        VALUES ${values}
+        `,
+        [plan_id, ...ott_platforms],
+      );
+    }
+
+    await client.query("COMMIT");
+
+    res.status(201).json({
+      success: true,
       message: "Plan created successfully",
-      plan: result.rows[0],
+      plan_id,
     });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Create plan error:", error);
-    return res.status(500).json({
-      message: "Internal server error",
+    res.status(500).json({
+      success: false,
+      message: "Failed to create plan",
+      error: error.message,
     });
+  } finally {
+    client.release();
   }
 };
 
