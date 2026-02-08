@@ -1,6 +1,6 @@
 import express from "express";
-import upload from "../middlewareS/upload.js";
-import compressImage from "../middlewareS/compressImage.js";
+import upload from "../middlewares/upload.js";
+import compressImage from "../middlewares/compressImage.js";
 
 import {
   createSlide,
@@ -12,22 +12,12 @@ import {
 
 const router = express.Router();
 
-router.post(
-  "/",
-  upload.single("image"),
-  compressImage,
-  createSlide
-);
+router.post("/", upload.single("image"), compressImage, createSlide);
 
 router.get("/", listSlides);
 router.get("/:position", getSlide);
 
-router.put(
-  "/:position",
-  upload.single("image"),
-  compressImage,
-  updateSlide
-);
+router.put("/:position", upload.single("image"), compressImage, updateSlide);
 
 router.delete("/:position", deleteSlide);
 
