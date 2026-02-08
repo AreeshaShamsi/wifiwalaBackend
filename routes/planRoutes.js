@@ -14,15 +14,20 @@ import {
 
 const router = Router();
 
+// ✅ SPECIFIC ROUTES FIRST
 router.post("/create", createPlan);
-router.get("/operators", getOperators); // get all operators
-router.get("/ott-platforms", getOTTPlatforms); // get all OTT platforms
-router.get("/:id", getPlanById); //plan by id
+router.get("/operators", getOperators); // ✅ Must come before /:id
+router.get("/ott-platforms", getOTTPlatforms); // ✅ Must come before /:id
+router.get("/subscription/all", getAllSubscriptions); // ✅ Must come before /:id
+router.post("/subscription", createSubscription);
+
+// ✅ PARAMETERIZED ROUTES LAST
+router.get("/:id", getPlanById); // ✅ Now comes after specific routes
 router.put("/update/:id", updatePlan);
 router.delete("/delete/:id", deletePlan);
-router.get("/", getPlans);
-router.post("/subscription", createSubscription);
-router.get("/subscription/all", getAllSubscriptions);
 router.delete("/subscription/:subscription_id", deleteSubscription);
+
+// ✅ GENERAL ROUTES
+router.get("/", getPlans);
 
 export default router;
